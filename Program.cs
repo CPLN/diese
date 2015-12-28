@@ -15,35 +15,54 @@ namespace diese
 			Application.Init ();
 			var win = new Window (string.Format("Dièse v{0}", VERSION));
 
-			win.Resize (640, 480);
+			win.Resize (1024, 768);
 			var menubar = new HButtonBox ();
+			var run = new Button ();
+			run.Label = "Exécuter";
+			run.Clicked += new EventHandler (on_run);
+			menubar.PackStart (run, false, false, 0);
+	
 			var exit = new Button ();
-			exit.Label = "Exit";
+			exit.Label = "Quitter";
 			exit.Clicked += new EventHandler (on_exit);
 			menubar.PackEnd (exit, false, false, 0);
 
 			var vbox = new VBox ();
 			vbox.PackStart (menubar, false, true, 0);
 
-			var hbox = new HBox ();
-			vbox.Add (hbox);
+			var hpaned = new HPaned ();
 
 			var scroll0 = new ScrolledWindow ();
 			var editor = new TextEditor ();
+			var options = new TextEditorOptions ();
+			options.EnableSyntaxHighlighting = true;
+			options.ShowFoldMargin = true;
+			options.ShowWhitespaces = ShowWhitespaces.Selection;
+			options.DrawIndentationMarkers = true;
+			options.EnableAnimations = true;
+			options.ColorScheme = "Visual Studio";
+			editor.Text = "avance(10);\ntourne(90);\navance(10);";
+			editor.Document.MimeType = "text/x-csharp";
 			scroll0.Add (editor);
-			hbox.Add (scroll0);
+			hpaned.Pack1 (scroll0, true, true);
 
-			//var scroll1 = new ScrolledWindow ();
+			var scroll1 = new ScrolledWindow ();
 			var drawing = new DrawingArea ();
+			drawing.SetSizeRequest(500, 500);
 			drawing.ExposeEvent += new ExposeEventHandler (on_expose);
-			//scroll1.Add (drawing);
-			hbox.Add (drawing);
+			scroll1.AddWithViewport (drawing);
+			hpaned.Pack2 (scroll1, true, true);
+
+			vbox.Add (hpaned);
 
 			win.Add (vbox);
-
 			win.ShowAll ();
 
 			Application.Run ();
+		}
+
+		public static void on_run(object o, EventArgs e) {
+			// TODO
 			/*
 			// https://csharpeval.codeplex.com/
 			var t = new ExpressionEvaluator.TypeRegistry();
@@ -69,18 +88,43 @@ namespace diese
 		public static void on_expose(object o, ExposeEventArgs e) {
 			DrawingArea area = (DrawingArea)o;
 
-			Cairo.Context g = Gdk.CairoHelper.Create(area.GdkWindow);
+			var width = 0;
+			var height = 0;
+			var size = 40;
+			area.GetSizeRequest(out width, out height);
 
-			g.MoveTo (new PointD (10, 10));
-			g.LineTo (new PointD (50, 50));
-			g.LineTo (new PointD (50, 10));
-			g.LineTo (new PointD (10, 10));
+			using(Cairo.Context g = Gdk.CairoHelper.Create(area.GdkWindow)) {
+				g.SetSourceRGB (1, 1, 1);
+				g.Rectangle (0, 0, width, height);
+				g.Fill ();
 
-			g.Color = new Color (1, 0, 0);
-			g.Stroke ();
+				g.Translate (width / 2, height / 2);
 
-			g.GetTarget ().Dispose ();
-			g.Dispose ();
+				g.Save ();
+				g.SetSourceColor(new Color (0, 0, 1));
+				g.LineWidth = 2;
+				g.LineCap = LineCap.Round;
+
+				g.MoveTo (0, 0);
+				g.LineTo (0, size);
+				g.Stroke ();
+
+				//g.MoveTo (0, 0);
+				g.Arc (0, 0, size, 0, 2 * Math.PI);
+				g.Stroke ();
+
+				g.MoveTo (size, -size);
+				g.SetSourceRGB (.2, .2, .2);
+				g.ShowText ("Hello world!");
+
+				g.Restore ();
+
+				g.Stroke ();
+				g.Restore ();
+
+				//g.GetTarget ().Dispose ();
+			//g.Dispose ();
+			}
 		}
 	}
 
