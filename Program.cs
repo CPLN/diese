@@ -1,154 +1,100 @@
-﻿using Gtk;
-using Cairo;
-using System;
-using ExpressionEvaluator;
-using Mono.TextEditor;
+﻿using System;
+using System.IO;
+using System.Drawing;
+using System.Windows.Forms;
+//using ExpressionEvaluator;
 
 
 namespace diese
 {
-    class MainClass
+    public class MainForm : Form
     {
         public const string VERSION = "0.0.1";
 
+        private Diese diese;
+        private Canvas canvas;
+        
+        public MainForm(Diese diese)
+        {
+            canvas = new Canvas();
+            canvas.AddActor(diese);
+            this.diese = diese;
+
+            Name = "Dièse";
+            Text = "Apprendre avec Dièse";
+
+            InitializeComponent();
+            InitializeEvents();
+        }
+
+        private void InitializeComponent()
+        {
+            canvas.Cursor = Cursors.Default;
+            canvas.Location = new Point(0, 0);
+            canvas.Size = new Size(640, 480);
+            canvas.Anchor = (AnchorStyles)(
+                AnchorStyles.Top |
+                AnchorStyles.Right |
+                AnchorStyles.Bottom |
+                AnchorStyles.Left
+            );
+            canvas.TabIndex = 0;
+
+            Controls.Add(canvas);
+        }
+
+        private void InitializeEvents()
+        {
+            KeyUp += onKeyUp;
+            canvas.KeyUp += onKeyUp;
+
+            var tick = new Timer();
+            tick.Interval = 1000 / 60; // 60 fps.
+            tick.Tick += onTick;
+
+            tick.Start();
+        }
+
+        private void onKeyUp(object sender, KeyEventArgs e) {
+            var pas = 100;
+   
+            switch (e.KeyCode)
+            {
+                case Keys.Left:
+                    diese.Move(-pas, 0);
+                    break;
+                case Keys.Right:
+                    diese.Move(pas, 0);
+                    break;
+                case Keys.Down:
+                    diese.Move(0, pas);
+                    break;
+                case Keys.Up:
+                    diese.Move(0, -pas);
+                    break;
+            }
+
+            canvas.Invalidate();
+        }
+
+        private void onTick(object sender, EventArgs e)
+        {
+            canvas.Tick();
+            canvas.Invalidate();
+        }
+
+        [STAThread]
         public static void Main(string[] args)
         {
-            Application.Init();
-            var win = new Window(string.Format("Dièse v{0}", VERSION));
+            var image = Image.FromFile(
+                "Resources" +
+                Path.DirectorySeparatorChar +
+                "diese.png");
 
-            win.Resize(1024, 768);
-            var menubar = new HButtonBox();
-            var run = new Button();
-            run.Label = "Exécuter";
-            run.Clicked += new EventHandler(on_run);
-            menubar.PackStart(run, false, false, 0);
-	
-            var exit = new Button();
-            exit.Label = "Quitter";
-            exit.Clicked += new EventHandler(on_exit);
-            menubar.PackEnd(exit, false, false, 0);
+            var diese = new Diese(0, 0, image);
+            var form = new MainForm(diese);
 
-            var vbox = new VBox();
-            vbox.PackStart(menubar, false, true, 0);
-
-            var hpaned = new HPaned();
-
-            var scroll0 = new ScrolledWindow();
-            var editor = new TextEditor();
-            var options = new TextEditorOptions();
-            options.EnableSyntaxHighlighting = true;
-            options.ShowFoldMargin = true;
-            options.ShowWhitespaces = ShowWhitespaces.Selection;
-            options.DrawIndentationMarkers = true;
-            options.EnableAnimations = true;
-            options.ColorScheme = "Visual Studio";
-            editor.Text = "// Bienvenue dans l'univers de C#\n" +
-                "// Utilisez les commandes ci-dessous\n" +
-                "// pour manipuler Dièse!\n\n" +
-                "avance(10);\ntourne(90);\navance(10);";
-            editor.Document.MimeType = "text/x-csharp";
-            scroll0.Add(editor);
-            hpaned.Pack1(scroll0, true, true);
-
-            var scroll1 = new ScrolledWindow();
-            var drawing = new DrawingArea();
-            drawing.SetSizeRequest(500, 500);
-            drawing.ExposeEvent += new ExposeEventHandler(on_expose);
-            scroll1.AddWithViewport(drawing);
-            hpaned.Pack2(scroll1, true, true);
-
-            vbox.Add(hpaned);
-
-            win.Add(vbox);
-            win.ShowAll();
-
-            Application.Run();
-        }
-
-        public static void on_run(object o, EventArgs e)
-        {
-            // TODO
-            /*
-			// https://csharpeval.codeplex.com/
-			var t = new ExpressionEvaluator.TypeRegistry();
-			var john = new Diese (0, 0);
-			t.RegisterSymbol ("john", john);
-
-			var expression = new CompiledExpression {
-				StringToParse = "john.Move();john.Move();john.Move();true;",
-				TypeRegistry = t
-			};
-			expression.ExpressionType = CompiledExpressionType.StatementList;
-
-			var result = expression.Eval ();
-
-			Console.WriteLine ("{0}, ({1},{2})", result, john.X, john.Y);
-			*/
-        }
-
-        public static void on_exit(object o, EventArgs e)
-        {
-            Application.Quit();
-        }
-
-        public static void on_expose(object o, ExposeEventArgs e)
-        {
-            DrawingArea area = (DrawingArea)o;
-
-            var width = 0;
-            var height = 0;
-            var size = 40;
-            area.GetSizeRequest(out width, out height);
-
-            using (Cairo.Context g = Gdk.CairoHelper.Create(area.GdkWindow))
-            {
-                g.SetSourceRGB(1, 1, 1);
-                g.Rectangle(0, 0, width, height);
-                g.Fill();
-
-                g.Translate(width / 2, height / 2);
-
-                g.Save();
-                g.SetSourceColor(new Color(0, 0, 1));
-                g.LineWidth = 2;
-                g.LineCap = LineCap.Round;
-
-                g.MoveTo(0, 0);
-                g.LineTo(0, size);
-                g.Stroke();
-
-                //g.MoveTo (0, 0);
-                g.Arc(0, 0, size, 0, 2 * Math.PI);
-                g.Stroke();
-
-                g.MoveTo(size, -size);
-                g.SetSourceRGB(.2, .2, .2);
-                g.ShowText("Hello world!");
-
-                g.Restore();
-
-                g.Stroke();
-                g.Restore();
-            }
-        }
-    }
-
-    class Diese
-    {
-        public int X { get; set; }
-
-        public int Y { get; set; }
-
-        public Diese(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
-
-        public void Move()
-        {
-            this.X += 1;
-            this.Y += 1;
+            Application.Run(form);
         }
     }
 }
