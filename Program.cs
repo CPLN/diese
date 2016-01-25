@@ -12,16 +12,23 @@ namespace diese
         public const string VERSION = "0.0.1";
 
         private Diese diese;
+        private Background background;
         private Canvas canvas;
         
         public MainForm(Diese diese)
         {
+            this.diese = diese;
+
+            background = new Background();
+
             canvas = new Canvas();
             canvas.AddActor(diese);
-            this.diese = diese;
 
             Name = "Dièse";
             Text = "Apprendre avec Dièse";
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+            TransparencyKey = Color.Magenta;
 
             InitializeComponent();
             InitializeEvents();
@@ -29,6 +36,16 @@ namespace diese
 
         private void InitializeComponent()
         {
+            background.Cursor = Cursors.Default;
+            background.Location = new Point(0, 0);
+            background.Size = new Size(640, 480);
+            background.Anchor = (AnchorStyles)(
+                AnchorStyles.Top |
+                AnchorStyles.Right |
+                AnchorStyles.Bottom |
+                AnchorStyles.Left
+            );
+
             canvas.Cursor = Cursors.Default;
             canvas.Location = new Point(0, 0);
             canvas.Size = new Size(640, 480);
@@ -38,15 +55,14 @@ namespace diese
                 AnchorStyles.Bottom |
                 AnchorStyles.Left
             );
-            canvas.TabIndex = 0;
 
-            Controls.Add(canvas);
+            background.Controls.Add(canvas);
+            Controls.Add(background);
         }
 
         private void InitializeEvents()
         {
-            KeyUp += onKeyUp;
-            canvas.KeyUp += onKeyUp;
+            background.KeyUp += onKeyUp;
 
             var tick = new Timer();
             tick.Interval = 1000 / 60; // 60 fps.
