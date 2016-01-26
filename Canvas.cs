@@ -3,6 +3,9 @@ using System.Drawing;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
+
+// TODO: refactor those controls as on "drawable layer" with the nice stuff from
+//       game design. E.g. Tick.
 namespace diese
 {
     public class Canvas : Control
@@ -14,9 +17,13 @@ namespace diese
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
 
-            actors = new List<Diese>();
+            SetStyle(
+                System.Windows.Forms.ControlStyles.UserPaint |
+                System.Windows.Forms.ControlStyles.AllPaintingInWmPaint |
+                System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
+                true);
 
-            Paint += onPaint;
+            actors = new List<Diese>();
         }
 
         public void AddActor(Diese diese)
@@ -32,7 +39,7 @@ namespace diese
             }
         }
 
-        protected void onPaint(object sender, PaintEventArgs e)
+        protected override void OnPaint(PaintEventArgs e)
         {
             foreach (var actor in actors)
             {
@@ -47,10 +54,15 @@ namespace diese
         {
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
-            Paint += onPaint;
+
+            SetStyle(
+                System.Windows.Forms.ControlStyles.UserPaint |
+                System.Windows.Forms.ControlStyles.AllPaintingInWmPaint |
+                System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
+                true);
         }
 
-        protected void onPaint(object sender, PaintEventArgs e)
+        protected override void OnPaint(PaintEventArgs e)
         {
             var rect = e.ClipRectangle;
             e.Graphics.DrawLine(

@@ -14,7 +14,8 @@ namespace diese
         private Diese diese;
         private Background background;
         private Canvas canvas;
-        
+        private long frame;
+
         public MainForm(Diese diese)
         {
             this.diese = diese;
@@ -26,9 +27,8 @@ namespace diese
 
             Name = "Dièse";
             Text = "Apprendre avec Dièse";
-            DoubleBuffered = true;
+
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-            TransparencyKey = Color.Magenta;
 
             InitializeComponent();
             InitializeEvents();
@@ -56,6 +56,7 @@ namespace diese
                 AnchorStyles.Left
             );
 
+            // Les poupées russes.
             background.Controls.Add(canvas);
             Controls.Add(background);
         }
@@ -68,6 +69,7 @@ namespace diese
             tick.Interval = 1000 / 60; // 60 fps.
             tick.Tick += onTick;
 
+            frame = 0;
             tick.Start();
         }
 
@@ -89,19 +91,22 @@ namespace diese
                     diese.Move(0, -pas);
                     break;
             }
-
-            canvas.Invalidate();
         }
 
         private void onTick(object sender, EventArgs e)
         {
             canvas.Tick();
             canvas.Invalidate();
+
+            frame += 1;
         }
 
         [STAThread]
         public static void Main(string[] args)
         {
+            // L'utilisation de ressources sous GNU/Linux est compliqué...
+            /*var resourceManager = new System.Resources.ResourceManager(typeof(MainForm));
+            var image = (Image) (resourceManager.GetObject("Avatar"));*/
             var image = Image.FromFile(
                 "Resources" +
                 Path.DirectorySeparatorChar +
