@@ -2,6 +2,9 @@
 using System.IO;
 using System.Drawing;
 using System.Windows.Forms;
+#if WINDOWS 
+using ScintillaNET;
+#endif
 //using ExpressionEvaluator;
 
 
@@ -36,9 +39,43 @@ namespace diese
 
         private void InitializeComponent()
         {
+            var zero = new Point(0, 0);
+            var size = new Size(640, 480);
+
+            var splitter = new SplitContainer();
+            splitter.Location = zero;
+            splitter.Size = size;
+            splitter.Anchor = (AnchorStyles)(
+                AnchorStyles.Top |
+                AnchorStyles.Right |
+                AnchorStyles.Bottom |
+                AnchorStyles.Left
+            );
+#if WINDOWS 
+            var scintilla = new Scintilla();
+            scintilla.Margins[0].Width = 0;
+
+            // TODO.
+#else
+            var scintilla = new TextBox();
+            scintilla.Multiline = true;
+            scintilla.ScrollBars = ScrollBars.Both;
+            scintilla.Font = new Font("Mono", 15, FontStyle.Regular);
+#endif
+
+            scintilla.Location = zero;
+            scintilla.Size = size;
+            scintilla.Anchor = (AnchorStyles)(
+                AnchorStyles.Top |
+                AnchorStyles.Right |
+                AnchorStyles.Bottom |
+                AnchorStyles.Left
+            );
+
+
             background.Cursor = Cursors.Default;
-            background.Location = new Point(0, 0);
-            background.Size = new Size(640, 480);
+            background.Location = zero;
+            background.Size = size;
             background.Anchor = (AnchorStyles)(
                 AnchorStyles.Top |
                 AnchorStyles.Right |
@@ -47,8 +84,8 @@ namespace diese
             );
 
             canvas.Cursor = Cursors.Default;
-            canvas.Location = new Point(0, 0);
-            canvas.Size = new Size(640, 480);
+            canvas.Location = zero;
+            canvas.Size = size;
             canvas.Anchor = (AnchorStyles)(
                 AnchorStyles.Top |
                 AnchorStyles.Right |
@@ -58,7 +95,9 @@ namespace diese
 
             // Les poupées russes.
             background.Controls.Add(canvas);
-            Controls.Add(background);
+            splitter.Panel1.Controls.Add(scintilla);
+            splitter.Panel2.Controls.Add(background);
+            Controls.Add(splitter);
         }
 
         private void InitializeEvents()

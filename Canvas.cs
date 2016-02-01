@@ -53,7 +53,7 @@ namespace diese
         public Background()
         {
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
+            BackColor = Color.WhiteSmoke;
 
             SetStyle(
                 System.Windows.Forms.ControlStyles.UserPaint |
