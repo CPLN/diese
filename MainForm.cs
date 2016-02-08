@@ -3,7 +3,7 @@ using System.Dynamic;
 using System.IO;
 using System.Drawing;
 using System.Windows.Forms;
-#if WINDOWS 
+#if !(LINUX) 
 using ScintillaNET;
 #endif
 using ExpressionEvaluator;
@@ -56,17 +56,41 @@ namespace diese
                 AnchorStyles.Bottom |
                 AnchorStyles.Left
             );
-#if WINDOWS 
+
+            var fontFamily = "Consolas";
+            var fontSize = 14;
+#if !(LINUX) 
             var scintilla = new Scintilla();
             scintilla.Margins[0].Width = 0;
 
-            // TODO.
+            scintilla.Lexer = Lexer.Cpp;
+            scintilla.StyleResetDefault();
+            scintilla.Styles[Style.Default].Font = fontFamily;
+            scintilla.Styles[Style.Default].Size = fontSize;
+            scintilla.StyleClearAll();
+
+            var Green = Color.FromArgb(0, 128, 0);
+            var Gray = Color.FromArgb(128, 128, 128);
+            var Red = Color.FromArgb(163, 21, 21);
+            scintilla.Styles[Style.Cpp.Default].ForeColor = Color.Silver;
+            scintilla.Styles[Style.Cpp.Comment].ForeColor = Green;
+            scintilla.Styles[Style.Cpp.CommentLine].ForeColor = Green;
+            scintilla.Styles[Style.Cpp.CommentLineDoc].ForeColor = Gray;
+            scintilla.Styles[Style.Cpp.Number].ForeColor = Color.Olive;
+            scintilla.Styles[Style.Cpp.Word].ForeColor = Color.Blue;
+            scintilla.Styles[Style.Cpp.Word2].ForeColor = Color.Blue;
+            scintilla.Styles[Style.Cpp.String].ForeColor = Red;
+            scintilla.Styles[Style.Cpp.Character].ForeColor = Red;
+            scintilla.Styles[Style.Cpp.Verbatim].ForeColor = Red;
+            scintilla.Styles[Style.Cpp.StringEol].BackColor = Color.Pink;
+            scintilla.Styles[Style.Cpp.Operator].ForeColor = Color.Purple;
+            scintilla.Styles[Style.Cpp.Preprocessor].ForeColor = Color.Maroon;
 #else
             var scintilla = new TextBox();
             scintilla.WordWrap = true;
             scintilla.Multiline = true;
             scintilla.ScrollBars = ScrollBars.Both;
-            scintilla.Font = new Font("Mono", 15, FontStyle.Regular);
+            scintilla.Font = new Font(fontFamily, fontSize, FontStyle.Regular);
 #endif
             scintilla.Dock = DockStyle.Fill;
             scintilla.AutoSize = true;
@@ -79,7 +103,7 @@ namespace diese
                 AnchorStyles.Bottom |
                 AnchorStyles.Left
             );
-
+            scintilla.Text = "// Bienvenue dans l'éditeur C#";
 
             fond.Cursor = Cursors.Default;
             fond.Dock = DockStyle.Fill;
