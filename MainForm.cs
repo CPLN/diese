@@ -41,21 +41,9 @@ namespace diese
 
         private void InitializeComponent()
         {
-            var zero = new Point(0, 0);
-            var size = new Size(640, 480);
-
             var splitter = new SplitContainer();
-            splitter.Location = zero;
-            splitter.Size = size;
-            //splitter.AutoSize = true;
             splitter.Dock = DockStyle.Fill;
             splitter.Parent = this;
-            splitter.Anchor = (AnchorStyles)(
-                AnchorStyles.Top |
-                AnchorStyles.Right |
-                AnchorStyles.Bottom |
-                AnchorStyles.Left
-            );
 
             var fontFamily = "Consolas";
             var fontSize = 14;
@@ -93,42 +81,15 @@ namespace diese
             scintilla.Font = new Font(fontFamily, fontSize, FontStyle.Regular);
 #endif
             scintilla.Dock = DockStyle.Fill;
-            scintilla.AutoSize = true;
-            scintilla.Location = zero;
-            scintilla.Size = size;
             scintilla.Parent = splitter.Panel1;
-            scintilla.Anchor = (AnchorStyles)(
-                AnchorStyles.Top |
-                AnchorStyles.Right |
-                AnchorStyles.Bottom |
-                AnchorStyles.Left
-            );
             scintilla.Text = "// Bienvenue dans l'éditeur C#";
 
             fond.Cursor = Cursors.Default;
             fond.Dock = DockStyle.Fill;
             fond.Parent = splitter.Panel2;
-            fond.AutoSize = true;
-            fond.Location = zero;
-            fond.Size = size;
-            fond.Anchor = (AnchorStyles)(
-                AnchorStyles.Top |
-                AnchorStyles.Right |
-                AnchorStyles.Bottom |
-                AnchorStyles.Left
-            );
 
             canvas.Cursor = Cursors.Default;
             canvas.Dock = DockStyle.Fill;
-            canvas.AutoSize = true;
-            canvas.Location = zero;
-            canvas.Size = size;
-            canvas.Anchor = (AnchorStyles)(
-                AnchorStyles.Top |
-                AnchorStyles.Right |
-                AnchorStyles.Bottom |
-                AnchorStyles.Left
-            );
 
             // lien.
             éditeur = scintilla;
@@ -241,6 +202,10 @@ namespace diese
             /*var resourceManager = new System.Resources.ResourceManager(typeof(MainForm));
             var image = (Image) (resourceManager.GetObject("Avatar"));*/
             var image = Image.FromFile(
+                ".." +
+                Path.DirectorySeparatorChar +
+                ".." +
+                Path.DirectorySeparatorChar +
                 "Resources" +
                 Path.DirectorySeparatorChar +
                 "diese.png");
