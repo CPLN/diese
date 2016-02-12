@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
@@ -50,6 +51,8 @@ namespace diese
 
     public class Background : Control
     {
+        public Image Image;
+
         public Background()
         {
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
@@ -73,6 +76,13 @@ namespace diese
                 Pens.Blue,
                 new PointF(rect.Right, rect.Top),
                 new PointF(rect.Left, rect.Bottom));
+
+            e.Graphics.DrawImage(Image, 0, 0);
+
+            using (var brush = new TextureBrush(Image, WrapMode.Tile))
+            {
+                e.Graphics.FillRectangle(brush, 0, 0, rect.Right, rect.Bottom);
+            }
         }
     }
 }

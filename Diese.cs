@@ -16,11 +16,8 @@ namespace diese
 
         private readonly List<Move> moves;
 
-        public Diese(int x, int y, Image image)
+        public Diese()
         {
-            X = x;
-            Y = y;
-            Image = image;
             Speed = 5;
             moves = new List<Move>();
         }

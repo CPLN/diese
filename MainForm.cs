@@ -2,6 +2,7 @@
 using System.Dynamic;
 using System.IO;
 using System.Drawing;
+using System.Collections.Generic;
 using System.Windows.Forms;
 #if !(LINUX) 
 using ScintillaNET;
@@ -15,28 +16,43 @@ namespace diese
     {
         public const string VERSION = "0.0.1";
 
-        private Diese dièse;
+        private Diese joueur;
         private Background fond;
         private Canvas canvas;
         private Control éditeur;
         private long frame;
+        private IDictionary<string,Image> images;
 
-        public MainForm(Diese diese)
+        public MainForm(IDictionary<string,string[]> resources)
         {
-            this.dièse = diese;
-
+            joueur = new Diese();
+            images = new Dictionary<string,Image>(resources.Count);
             fond = new Background();
-
             canvas = new Canvas();
-            canvas.AddActor(diese);
+
+            foreach (var item in resources)
+            {
+                Console.WriteLine(item.Key);
+                images.Add(item.Key, loadImage(item.Key, item.Value));
+            }
+            fond.Image = images["fond"];
+            joueur.Image = images["dièse"];
+            canvas.AddActor(joueur);
+
+            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
 
             Name = "Dièse";
             Text = "Apprendre avec Dièse";
 
-            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-
             InitializeComponent();
             InitializeEvents();
+        }
+
+        private Image loadImage(string name, string[] path)
+        {
+            var root = String.Join(Path.DirectorySeparatorChar.ToString(), new string[]{"..", "..", "Resources", ""});
+            var p = String.Join(Path.DirectorySeparatorChar.ToString(), path);
+            return Image.FromFile(root + p);
         }
 
         private void InitializeComponent()
@@ -121,16 +137,16 @@ namespace diese
                 switch (e.KeyCode)
                 {
                     case Keys.Left:
-                        dièse.Move(-pas, 0);
+                        joueur.Move(-pas, 0);
                         break;
                     case Keys.Right:
-                        dièse.Move(pas, 0);
+                        joueur.Move(pas, 0);
                         break;
                     case Keys.Down:
-                        dièse.Move(0, pas);
+                        joueur.Move(0, pas);
                         break;
                     case Keys.Up:
-                        dièse.Move(0, -pas);
+                        joueur.Move(0, -pas);
                         break;
                     case Keys.F5:
                         evaluate(éditeur.Text);
@@ -153,22 +169,22 @@ namespace diese
             dynamic scope = new ExpandoObject();
             scope.gauche = (Func<int,ExpandoObject>)(x =>
                 {
-                    dièse.Move(-x, 0);
+                    joueur.Move(-x, 0);
                     return scope;
                 });
             scope.droite = (Func<int,ExpandoObject>) (x =>
                 {
-                    dièse.Move(x, 0);
+                    joueur.Move(x, 0);
                     return scope;
                 });
             scope.haut = (Func<int,ExpandoObject>)(x =>
                 {
-                    dièse.Move(0, -x);
+                    joueur.Move(0, -x);
                     return scope;
                 });
             scope.bas = (Func<int,ExpandoObject>) (x =>
                 {
-                    dièse.Move(0, x);
+                    joueur.Move(0, x);
                     return scope;
                 });
             var expression = new CompiledExpression(code)
@@ -198,20 +214,13 @@ namespace diese
         [STAThread]
         public static void Main(string[] args)
         {
-            // L'utilisation de ressources sous GNU/Linux est compliqué...
-            /*var resourceManager = new System.Resources.ResourceManager(typeof(MainForm));
-            var image = (Image) (resourceManager.GetObject("Avatar"));*/
-            var image = Image.FromFile(
-                ".." +
-                Path.DirectorySeparatorChar +
-                ".." +
-                Path.DirectorySeparatorChar +
-                "Resources" +
-                Path.DirectorySeparatorChar +
-                "diese.png");
+            var images = new Dictionary<string,string[]>();
+            // Poulpe verdâtre.
+            images.Add("dièse", new string[]{"space-shooter", "ships", "9.png"});
+            // Fond étoilé simple.
+            images.Add("fond", new string[]{"space-shooter", "backgrounds", "1.png"});
 
-            var diese = new Diese(0, 0, image);
-            var form = new MainForm(diese);
+            var form = new MainForm(images);
 
             Application.Run(form);
         }
