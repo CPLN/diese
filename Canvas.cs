@@ -11,7 +11,8 @@ namespace diese
 {
     public class Canvas : Control
     {
-        private readonly List<Diese> actors;
+        private readonly List<Actor> actors;
+        private readonly List<Actor> futureActors;
 
         public Canvas()
         {
@@ -24,12 +25,13 @@ namespace diese
                 System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
                 true);
 
-            actors = new List<Diese>();
+            actors = new List<Actor>();
+            futureActors = new List<Actor>();
         }
 
-        public void AddActor(Diese diese)
+        public void AddActor(Actor actor)
         {
-            actors.Add(diese);
+            futureActors.Add(actor);
         }
 
         public void Tick()
@@ -38,13 +40,19 @@ namespace diese
             {
                 actor.Tick();
             }
+            foreach (var actor in futureActors)
+            {
+                actors.Add(actor);
+            }
+            actors.RemoveAll(a => a.X > 1000 || a.Y > 1000);
+            futureActors.Clear();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            foreach (var actor in actors)
+            for(var i = actors.Count - 1; i >= 0; i--)
             {
-                actor.Draw(e.Graphics);
+                actors[i].Draw(e.Graphics);
             }
         }
     }

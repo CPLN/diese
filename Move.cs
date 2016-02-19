@@ -2,25 +2,49 @@
 
 namespace diese
 {
-    public class Move {
-        private double length;
-        private double x;
-        private double y;
+    public abstract class Operation
+    {
+    }
 
-        public double Length { get { return length; } }
+    public class Move : Operation {
+        public double Length;
 
-        public double X { get { return x; } }
+        public double X;
 
-        public double Y { get { return y; } }
+        public double Y;
 
-        public Move(int dx, int dy) {
-            length = Math.Sqrt(dx * dx + dy * dy);
-            x = dx / Length;
-            y = dy / Length;
+        public Move() {
+        }
+
+        public Move(int dx, int dy)
+        {
+            Length = Math.Sqrt(dx * dx + dy * dy);
+            X = dx / Length;
+            Y = dy / Length;
         }
 
         public void Shorten(int dl) {
-            length = Math.Max(0, Length - dl);
+            Length = Math.Max(0, Length - dl);
+        }
+    }
+
+    public class Shot : Operation
+    {
+        public int X;
+        public int Y;
+        public double Angle;
+        public double Length;
+        public bool HasShot;
+
+        public Shot()
+        {
+            HasShot = false;
+            Length = 20;
+        }
+
+        public void Shorten(int dt)
+        {
+            Length = Math.Max(0, Length - dt);
         }
     }
 }

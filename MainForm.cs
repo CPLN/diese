@@ -4,7 +4,7 @@ using System.IO;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Windows.Forms;
-#if !(LINUX) 
+#if !LINUX
 using ScintillaNET;
 #endif
 using ExpressionEvaluator;
@@ -25,7 +25,6 @@ namespace diese
 
         public MainForm(IDictionary<string,string[]> resources)
         {
-            joueur = new Diese();
             images = new Dictionary<string,Image>(resources.Count);
             fond = new Background();
             canvas = new Canvas();
@@ -36,7 +35,14 @@ namespace diese
                 images.Add(item.Key, loadImage(item.Key, item.Value));
             }
             fond.Image = images["fond"];
-            joueur.Image = images["dièse"];
+
+            joueur = new Diese (canvas, images) {
+                X = 0,
+                Y = 0,
+                Width = images["dièse"].Width,
+                Height = images["dièse"].Height,
+                Image = images["dièse"],
+            };
             canvas.AddActor(joueur);
 
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
@@ -148,6 +154,9 @@ namespace diese
                     case Keys.Up:
                         joueur.Move(0, -pas);
                         break;
+                    case Keys.Space:
+                        joueur.Shot(0);
+                        break;
                     case Keys.F5:
                         evaluate(éditeur.Text);
                         break;
@@ -167,24 +176,28 @@ namespace diese
             registry.RegisterDefaultTypes();
             registry.RegisterType("Console", typeof(Console));
             dynamic scope = new ExpandoObject();
-            scope.gauche = (Func<int,ExpandoObject>)(x =>
+            scope.Gauche = (Func<int,ExpandoObject>)(x =>
                 {
                     joueur.Move(-x, 0);
                     return scope;
                 });
-            scope.droite = (Func<int,ExpandoObject>) (x =>
+            scope.Droite = (Func<int,ExpandoObject>) (x =>
                 {
                     joueur.Move(x, 0);
                     return scope;
                 });
-            scope.haut = (Func<int,ExpandoObject>)(x =>
+            scope.Haut = (Func<int,ExpandoObject>)(x =>
                 {
                     joueur.Move(0, -x);
                     return scope;
                 });
-            scope.bas = (Func<int,ExpandoObject>) (x =>
+            scope.Bas = (Func<int,ExpandoObject>) (x =>
                 {
                     joueur.Move(0, x);
+                    return scope;
+                });
+            scope.Tir = (Func<int,ExpandoObject>) (x => {
+                    joueur.Shot(x);
                     return scope;
                 });
             var expression = new CompiledExpression(code)
@@ -219,6 +232,8 @@ namespace diese
             images.Add("dièse", new string[]{"space-shooter", "ships", "9.png"});
             // Fond étoilé simple.
             images.Add("fond", new string[]{"space-shooter", "backgrounds", "1.png"});
+            // Tir simple
+            images.Add("tir", new string[]{"space-shooter", "shots", "1.png"});
 
             var form = new MainForm(images);
 
