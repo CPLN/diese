@@ -14,6 +14,8 @@ namespace diese
         private readonly List<Actor> actors;
         private readonly List<Actor> futureActors;
 
+        public readonly List<Bullet> Bullets;
+
         public Canvas()
         {
             SetStyle(ControlStyles.SupportsTransparentBackColor, true);
@@ -27,11 +29,21 @@ namespace diese
 
             actors = new List<Actor>();
             futureActors = new List<Actor>();
+            Bullets = new List<Bullet>();
         }
 
         public void AddActor(Actor actor)
         {
+            if (actor is Bullet)
+            {
+                Bullets.Add((Bullet) actor);
+            }
             futureActors.Add(actor);
+        }
+
+        public void RemoveActor(Actor actor)
+        {
+            actor.Dead = true;
         }
 
         public void Tick()
@@ -44,16 +56,29 @@ namespace diese
             {
                 actors.Add(actor);
             }
-            actors.RemoveAll(a => a.X > 1000 || a.Y > 1000);
+            Bullets.ForEach(bullet =>
+                {
+                    if (bullet.X > 1000 || bullet.X < -1000 || bullet.Y > 1000 || bullet.Y < -1000) {
+                        bullet.Dead = true;
+                    }
+                });
+            actors.RemoveAll(a => a.Dead);
             futureActors.Clear();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            var rect = e.ClipRectangle;
+            var state = e.Graphics.Save();
+
+            e.Graphics.TranslateTransform(rect.Right / 2f, rect.Bottom / 2f);
+
             for(var i = actors.Count - 1; i >= 0; i--)
             {
                 actors[i].Draw(e.Graphics);
             }
+
+            e.Graphics.Restore(state);
         }
     }
 
@@ -76,6 +101,7 @@ namespace diese
         protected override void OnPaint(PaintEventArgs e)
         {
             var rect = e.ClipRectangle;
+            #if DEBUG
             e.Graphics.DrawLine(
                 Pens.Blue,
                 new PointF(rect.Left, rect.Top),
@@ -84,7 +110,7 @@ namespace diese
                 Pens.Blue,
                 new PointF(rect.Right, rect.Top),
                 new PointF(rect.Left, rect.Bottom));
-
+            #endif
             e.Graphics.DrawImage(Image, 0, 0);
 
             using (var brush = new TextureBrush(Image, WrapMode.Tile))

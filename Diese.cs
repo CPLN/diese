@@ -18,8 +18,33 @@ namespace diese
 
         public Image Image;
 
-        public virtual void Draw(Graphics gr) {
-            gr.DrawImage(Image, (int) X, (int) Y, (int) Width, (int) Height);
+        public double Angle;
+
+        public bool Dead = false;
+
+        public double Degree
+        {
+            get { return Angle * 180 / Math.PI; }
+            set { Angle = value * Math.PI / 180.0; }
+        }
+
+        public virtual void Draw(Graphics gr)
+        {
+            var state = gr.Save();
+            gr.TranslateTransform((float)X, (float)Y);
+            gr.RotateTransform((float)(Degree));
+            gr.DrawImage(Image, (int)(-Width / 2.0), (int)(-Height / 2.0), (int)Width, (int)Height);
+            gr.Restore(state);
+        }
+
+        public bool CollisionWith(Actor other)
+        {
+            // Dummy algorith using the distance method.
+            var min = Math.Min(Width, Height);
+            var minOther = Math.Min(other.Width, other.Height);
+            var distance = Math.Sqrt(Math.Pow(other.X - X, 2) + Math.Pow(other.Y - Y, 2));
+
+            return distance < (min + minOther) / 2f;
         }
 
         public abstract void Tick();
@@ -31,9 +56,11 @@ namespace diese
         private readonly Canvas parent;
         private readonly IDictionary<string,Image> images;
 
-        public Diese(Canvas canvas, IDictionary<string,Image> assets) : base()
+        public Diese(Canvas canvas, IDictionary<string,Image> assets)
+            : base()
         {
             Speed = 5;
+            Angle = 0;
             moves = new List<Operation>();
             parent = canvas;
             images = assets;
@@ -46,12 +73,14 @@ namespace diese
 
         public void Shot(int angle)
         {
-            moves.Add(new Shot(){
-                X=(int) X, Y=(int)Y, Angle=angle
-            });
+            moves.Add(new Shot()
+                {
+                    X = (int)X, Y = (int)Y, Angle = angle
+                });
         }
 
-        public override void Tick() {
+        public override void Tick()
+        {
             if (moves.Count == 0)
             {
                 return;
@@ -82,8 +111,8 @@ namespace diese
                     var image = images["tir"];
                     parent.AddActor(new Bullet
                         {
-                            X = X + Width/2,
-                            Y = Y + Height/2,
+                            X = X,
+                            Y = Y,
                             Degree = b.Angle,
                             Image = image,
                             Width = image.Width,
@@ -92,7 +121,8 @@ namespace diese
                     b.HasShot = true;
                 }
 
-                if (b.Length <= 0) {
+                if (b.Length <= 0)
+                {
                     moves.RemoveAt(0);
                 }
             }
@@ -101,29 +131,53 @@ namespace diese
 
     public class Bullet : Actor
     {
-        public double Angle;
-
-        public double Degree {
-            get { return Angle * 180 / Math.PI; }
-            set { Angle = value * Math.PI / 180.0; }
-        }
-
-        public Bullet() : base()
+        public Bullet()
+            : base()
         {
-            Speed = 10;
+            Speed = 5;
         }
 
-        public override void Tick() {
+        public override void Tick()
+        {
             X += Math.Cos(Angle) * Speed;
             Y += Math.Sin(Angle) * Speed;
         }
 
-        public override void Draw(Graphics gr) {
-            var state = gr.Save();
-            gr.TranslateTransform((float) X, (float) Y);
-            gr.RotateTransform((float)(Degree + 90.0));
-            gr.DrawImage(Image, (int) (-Width / 2.0), (int) (-Height / 2.0), (int) Width, (int) Height);
-            gr.Restore(state);
+        public override void Draw(Graphics g)
+        {
+            Angle += Math.PI / 2f;
+            base.Draw(g);
+            Angle -= Math.PI / 2f;
+        }
+    }
+
+    public class Asteroid : Actor
+    {
+        public double Rotation;
+        public double AngularRotation;
+
+        public Asteroid()
+            : base()
+        {
+            Speed = 2;
+            Rotation = 0;
+            var rnd = new Random();
+            AngularRotation = rnd.NextDouble() + .5;
+        }
+
+        public override void Tick()
+        {
+            Rotation = (Rotation + AngularRotation * Speed) % 360;
+
+            X += Math.Cos(Angle) * Speed;
+            Y += Math.Sin(Angle) * Speed;
+        }
+
+        public override void Draw(Graphics g)
+        {
+            Degree += Rotation;
+            base.Draw(g);
+            Degree -= Rotation;
         }
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Windows.Forms;
+
 #if !LINUX
 using ScintillaNET;
 #endif
@@ -23,20 +24,24 @@ namespace diese
         private long frame;
         private IDictionary<string,Image> images;
 
+        private Timer tick;
+        private List<Asteroid> asteroids;
+
         public MainForm(IDictionary<string,string[]> resources)
         {
             images = new Dictionary<string,Image>(resources.Count);
+            asteroids = new List<Asteroid>();
             fond = new Background();
             canvas = new Canvas();
 
             foreach (var item in resources)
             {
-                Console.WriteLine(item.Key);
                 images.Add(item.Key, loadImage(item.Key, item.Value));
             }
             fond.Image = images["fond"];
 
-            joueur = new Diese (canvas, images) {
+            joueur = new Diese(canvas, images)
+            {
                 X = 0,
                 Y = 0,
                 Width = images["dièse"].Width,
@@ -56,7 +61,7 @@ namespace diese
 
         private Image loadImage(string name, string[] path)
         {
-            var root = String.Join(Path.DirectorySeparatorChar.ToString(), new string[]{"..", "..", "Resources", ""});
+            var root = String.Join(Path.DirectorySeparatorChar.ToString(), new string[]{ "..", "..", "Resources", "" });
             var p = String.Join(Path.DirectorySeparatorChar.ToString(), path);
             return Image.FromFile(root + p);
         }
@@ -104,7 +109,16 @@ namespace diese
 #endif
             scintilla.Dock = DockStyle.Fill;
             scintilla.Parent = splitter.Panel1;
-            scintilla.Text = "// Bienvenue dans l'éditeur C#";
+            scintilla.Text = "// Bienvenue dans l'éditeur C#\n\n" +
+                "var asteroids = (Asteroid[]) Radar();\n\n" +
+                "foreach (var asteroid in asteroids) {\n" +
+                "    var angle = Math.Atan(asteroid.Y / asteroid.X);\n" +
+                "    var deg = angle * 180 / 3.1415923;\n\n" +
+                "    if (asteroid.X < 0) {\n" +
+                "        deg += 180;\n" +
+                "    }\n\n" +
+                "    Tir((int) deg);\n" +
+                "}\n";
 
             fond.Cursor = Cursors.Default;
             fond.Dock = DockStyle.Fill;
@@ -128,7 +142,7 @@ namespace diese
             éditeur.KeyUp += onKeyUp;
             fond.KeyUp += onKeyUp;
 
-            var tick = new Timer();
+            tick = new Timer();
             tick.Interval = 1000 / 60; // 60 fps.
             tick.Tick += onTick;
 
@@ -136,7 +150,8 @@ namespace diese
             tick.Start();
         }
 
-        private void onKeyUp(object sender, KeyEventArgs e) {
+        private void onKeyUp(object sender, KeyEventArgs e)
+        {
             var pas = 100;
    
             if (sender == fond)
@@ -175,43 +190,93 @@ namespace diese
             var registry = new TypeRegistry();
             registry.RegisterDefaultTypes();
             registry.RegisterType("Console", typeof(Console));
+            registry.RegisterType("Asteroid", typeof(Asteroid));
+            registry.RegisterType("Asteroid[]", typeof(Asteroid[]));
             dynamic scope = new ExpandoObject();
             scope.Gauche = (Func<int,ExpandoObject>)(x =>
-                {
-                    joueur.Move(-x, 0);
-                    return scope;
-                });
-            scope.Droite = (Func<int,ExpandoObject>) (x =>
-                {
-                    joueur.Move(x, 0);
-                    return scope;
-                });
+            {
+                joueur.Move(-x, 0);
+                return scope;
+            });
+            scope.Droite = (Func<int,ExpandoObject>)(x =>
+            {
+                joueur.Move(x, 0);
+                return scope;
+            });
             scope.Haut = (Func<int,ExpandoObject>)(x =>
-                {
-                    joueur.Move(0, -x);
-                    return scope;
-                });
-            scope.Bas = (Func<int,ExpandoObject>) (x =>
-                {
-                    joueur.Move(0, x);
-                    return scope;
-                });
-            scope.Tir = (Func<int,ExpandoObject>) (x => {
-                    joueur.Shot(x);
-                    return scope;
-                });
+            {
+                joueur.Move(0, -x);
+                return scope;
+            });
+            scope.Bas = (Func<int,ExpandoObject>)(x =>
+            {
+                joueur.Move(0, x);
+                return scope;
+            });
+            scope.Tir = (Func<int,ExpandoObject>)(x =>
+            {
+                joueur.Shot(x);
+                return scope;
+            });
+            Func<Asteroid[]> radar = () =>
+            {
+                    return asteroids.ToArray();
+            };
+            scope.Radar = radar;
+
             var expression = new CompiledExpression(code)
             {
                 TypeRegistry = registry
             };
             expression.ExpressionType = CompiledExpressionType.StatementList;
 
-            try {
+            // Préparation du niveau en cours.
+            var rnd = new Random();
+            asteroids.ForEach(asteroid =>
+                {
+                    asteroid.Dead = true;
+                });
+            asteroids.RemoveAll(a => { return a.Dead; });
+
+            for(var i = 0; i < rnd.Next(10, 30); i++) {
+                var angle = rnd.NextDouble() * Math.PI * 2f;
+                var distance = rnd.Next(300, 400);
+                var asteroid = new Asteroid()
+                {
+                        X = -distance * Math.Cos(angle),
+                        Y = -distance * Math.Sin(angle),
+                        Angle = angle,
+                        Width = images["météorite"].Width,
+                        Height = images["météorite"].Height,
+                        Image = images["météorite"]
+                };
+                canvas.AddActor(asteroid);
+                asteroids.Add(asteroid);
+            }
+
+            try
+            {
                 var f = expression.ScopeCompile<ExpandoObject>();
                 f(scope);
-            } catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e) {
+            }
+            catch (NullReferenceException)
+            {
+                // Do nothing, no code where entered.
+                //MessageBox.Show("Vous n'avez pas saisi de code à exécuter.");
+            }
+            catch (ArgumentException e) {
                 MessageBox.Show(e.Message);
-            } catch (ExpressionEvaluator.Parser.ExpressionParseException e) {
+            }
+            catch (InvalidOperationException e)
+            {
+                MessageBox.Show(e.Message);
+            }
+            catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e)
+            {
+                MessageBox.Show(e.Message);
+            }
+            catch (ExpressionEvaluator.Parser.ExpressionParseException e)
+            {
                 MessageBox.Show(e.Message);
             }
         }
@@ -220,8 +285,43 @@ namespace diese
         {
             canvas.Tick();
             canvas.Invalidate();
-
             frame += 1;
+
+            if (asteroids.Count > 0)
+            {
+                foreach (var asteroid in asteroids)
+                {
+                    if (asteroid.CollisionWith(joueur))
+                    {
+                        MessageBox.Show("Vous venez d'exploser dans l'hyper-espace...");
+                        //tick.Stop();
+                        asteroids.ForEach(a => a.Dead = true);
+                        return;
+                    }
+                }
+
+                foreach (var bullet in canvas.Bullets)
+                {
+                    foreach (var asteroid in asteroids)
+                    {
+                        if (!bullet.Dead && asteroid.CollisionWith(bullet))
+                        {
+                            bullet.Dead = true;
+                            asteroid.Dead = true;
+                        }
+                    }
+                }
+
+                asteroids.RemoveAll(asteroid =>
+                    {
+                        return asteroid.Dead;
+                    });
+
+                if (asteroids.Count == 0)
+                {
+                    MessageBox.Show("Vous avez gagné! Bravo.");
+                }
+            }
         }
 
         [STAThread]
@@ -229,15 +329,15 @@ namespace diese
         {
             var images = new Dictionary<string,string[]>();
             // Poulpe verdâtre.
-            images.Add("dièse", new string[]{"space-shooter", "ships", "9.png"});
+            images.Add("dièse", new string[]{ "space-shooter", "ships", "9.png" });
             // Fond étoilé simple.
-            images.Add("fond", new string[]{"space-shooter", "backgrounds", "1.png"});
+            images.Add("fond", new string[]{ "space-shooter", "backgrounds", "1.png" });
             // Tir simple
-            images.Add("tir", new string[]{"space-shooter", "shots", "1.png"});
+            images.Add("tir", new string[]{ "space-shooter", "shots", "7.png" });
+            // Grosse météorite
+            images.Add("météorite", new string[]{ "space-shooter", "backgrounds", "meteor-1.png" });
 
-            var form = new MainForm(images);
-
-            Application.Run(form);
+            Application.Run(new MainForm(images));
         }
     }
 }
