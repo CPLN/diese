@@ -18,7 +18,7 @@ namespace diese
 
         public Image Image;
 
-        public void Draw(Graphics gr) {
+        public virtual void Draw(Graphics gr) {
             gr.DrawImage(Image, (int) X, (int) Y, (int) Width, (int) Height);
         }
 
@@ -44,10 +44,10 @@ namespace diese
             moves.Add(new Move(dx, dy));
         }
 
-        public void Shot(int x)
+        public void Shot(int angle)
         {
             moves.Add(new Shot(){
-                X=(int) X, Y=(int)Y, Angle=90f
+                X=(int) X, Y=(int)Y, Angle=angle
             });
         }
 
@@ -82,9 +82,9 @@ namespace diese
                     var image = images["tir"];
                     parent.AddActor(new Bullet
                         {
-                            X = X + (Width - image.Width) / 2,
-                            Y = Y + (Height - image.Height) / 2,
-                            Angle = Math.PI / 2f,
+                            X = X + Width/2,
+                            Y = Y + Height/2,
+                            Degree = b.Angle,
                             Image = image,
                             Width = image.Width,
                             Height = image.Height
@@ -103,6 +103,11 @@ namespace diese
     {
         public double Angle;
 
+        public double Degree {
+            get { return Angle * 180 / Math.PI; }
+            set { Angle = value * Math.PI / 180.0; }
+        }
+
         public Bullet() : base()
         {
             Speed = 10;
@@ -111,6 +116,14 @@ namespace diese
         public override void Tick() {
             X += Math.Cos(Angle) * Speed;
             Y += Math.Sin(Angle) * Speed;
+        }
+
+        public override void Draw(Graphics gr) {
+            var state = gr.Save();
+            gr.TranslateTransform((float) X, (float) Y);
+            gr.RotateTransform((float)(Degree + 90.0));
+            gr.DrawImage(Image, (int) (-Width / 2.0), (int) (-Height / 2.0), (int) Width, (int) Height);
+            gr.Restore(state);
         }
     }
 }

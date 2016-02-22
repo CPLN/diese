@@ -155,7 +155,7 @@ namespace diese
                         joueur.Move(0, -pas);
                         break;
                     case Keys.Space:
-                        joueur.Shot(0);
+                        joueur.Shot(90);
                         break;
                     case Keys.F5:
                         evaluate(éditeur.Text);
