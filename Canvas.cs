@@ -36,7 +36,7 @@ namespace diese
         {
             if (actor is Bullet)
             {
-                Bullets.Add((Bullet) actor);
+                Bullets.Add((Bullet)actor);
             }
             futureActors.Add(actor);
         }
@@ -58,7 +58,8 @@ namespace diese
             }
             Bullets.ForEach(bullet =>
                 {
-                    if (bullet.X > 1000 || bullet.X < -1000 || bullet.Y > 1000 || bullet.Y < -1000) {
+                    if (bullet.X > 1000 || bullet.X < -1000 || bullet.Y > 1000 || bullet.Y < -1000)
+                    {
                         bullet.Dead = true;
                     }
                 });
@@ -71,9 +72,11 @@ namespace diese
             var rect = e.ClipRectangle;
             var state = e.Graphics.Save();
 
+            e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
             e.Graphics.TranslateTransform(rect.Right / 2f, rect.Bottom / 2f);
 
-            for(var i = actors.Count - 1; i >= 0; i--)
+
+            for (var i = actors.Count - 1; i >= 0; i--)
             {
                 actors[i].Draw(e.Graphics);
             }
@@ -85,23 +88,35 @@ namespace diese
     public class Background : Control
     {
         public Image Image;
+        private TextureBrush brush;
 
         public Background()
         {
-            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.WhiteSmoke;
-
             SetStyle(
                 System.Windows.Forms.ControlStyles.UserPaint |
                 System.Windows.Forms.ControlStyles.AllPaintingInWmPaint |
                 System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
                 true);
+
+            Disposed += onDispose;
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        private void onDispose(object sender, EventArgs e)
         {
+            brush.Dispose();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            if (brush == null)
+            {
+                brush = new TextureBrush(Image, WrapMode.Tile);
+            }
+
             var rect = e.ClipRectangle;
-            #if DEBUG
+            e.Graphics.FillRectangle(brush, 0, 0, rect.Right, rect.Bottom);
+
+#if DEBUG
             e.Graphics.DrawLine(
                 Pens.Blue,
                 new PointF(rect.Left, rect.Top),
@@ -110,13 +125,7 @@ namespace diese
                 Pens.Blue,
                 new PointF(rect.Right, rect.Top),
                 new PointF(rect.Left, rect.Bottom));
-            #endif
-            e.Graphics.DrawImage(Image, 0, 0);
-
-            using (var brush = new TextureBrush(Image, WrapMode.Tile))
-            {
-                e.Graphics.FillRectangle(brush, 0, 0, rect.Right, rect.Bottom);
-            }
+#endif
         }
     }
 }

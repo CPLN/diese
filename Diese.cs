@@ -54,9 +54,9 @@ namespace diese
     {
         private readonly List<Operation> moves;
         private readonly Canvas parent;
-        private readonly IDictionary<string,Image> images;
+        private readonly IDictionary<string, Image> images;
 
-        public Diese(Canvas canvas, IDictionary<string,Image> assets)
+        public Diese(Canvas canvas, IDictionary<string, Image> assets)
             : base()
         {
             Speed = 5;
@@ -71,11 +71,13 @@ namespace diese
             moves.Add(new Move(dx, dy));
         }
 
-        public void Shot(int angle)
+        public void Shot(double angle)
         {
             moves.Add(new Shot()
                 {
-                    X = (int)X, Y = (int)Y, Angle = angle
+                    X = (int)X,
+                    Y = (int)Y,
+                    Angle = angle
                 });
         }
 
@@ -155,19 +157,21 @@ namespace diese
     {
         public double Rotation;
         public double AngularRotation;
+        private static Random seed = new Random();
 
         public Asteroid()
             : base()
         {
             Speed = 2;
             Rotation = 0;
-            var rnd = new Random();
-            AngularRotation = rnd.NextDouble() + .5;
+            // Il faut seeder sinon toutes les valeurs sont identiques (car basé sur le temps).
+            var rnd = new Random(seed.Next());
+            AngularRotation = (rnd.NextDouble() - .5) * Math.Pow(rnd.NextDouble() + 1, 3);
         }
 
         public override void Tick()
         {
-            Rotation = (Rotation + AngularRotation * Speed) % 360;
+            Rotation = (Rotation + AngularRotation) % 360;
 
             X += Math.Cos(Angle) * Speed;
             Y += Math.Sin(Angle) * Speed;

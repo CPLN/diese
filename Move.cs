@@ -6,14 +6,16 @@ namespace diese
     {
     }
 
-    public class Move : Operation {
+    public class Move : Operation
+    {
         public double Length;
 
         public double X;
 
         public double Y;
 
-        public Move() {
+        public Move()
+        {
         }
 
         public Move(int dx, int dy)
@@ -23,7 +25,8 @@ namespace diese
             Y = dy / Length;
         }
 
-        public void Shorten(int dl) {
+        public void Shorten(int dl)
+        {
             Length = Math.Max(0, Length - dl);
         }
     }

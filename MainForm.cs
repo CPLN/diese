@@ -4,6 +4,7 @@ using System.IO;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Windows.Forms;
+using System.Threading;
 
 #if !LINUX
 using ScintillaNET;
@@ -22,14 +23,16 @@ namespace diese
         private Canvas canvas;
         private Control éditeur;
         private long frame;
-        private IDictionary<string,Image> images;
+        private IDictionary<string, Image> images;
 
-        private Timer tick;
+        // System.Windows.Forms.Timer is not great for good fps.
+        private System.Threading.Timer tick;
         private List<Asteroid> asteroids;
+        private bool started;
 
-        public MainForm(IDictionary<string,string[]> resources)
+        public MainForm(IDictionary<string, string[]> resources)
         {
-            images = new Dictionary<string,Image>(resources.Count);
+            images = new Dictionary<string, Image>(resources.Count);
             asteroids = new List<Asteroid>();
             fond = new Background();
             canvas = new Canvas();
@@ -61,7 +64,7 @@ namespace diese
 
         private Image loadImage(string name, string[] path)
         {
-            var root = String.Join(Path.DirectorySeparatorChar.ToString(), new string[]{ "..", "..", "Resources", "" });
+            var root = String.Join(Path.DirectorySeparatorChar.ToString(), new string[] { "..", "..", "Resources", "" });
             var p = String.Join(Path.DirectorySeparatorChar.ToString(), path);
             return Image.FromFile(root + p);
         }
@@ -74,7 +77,7 @@ namespace diese
 
             var fontFamily = "Consolas";
             var fontSize = 14;
-#if !(LINUX) 
+#if !(LINUX)
             var scintilla = new Scintilla();
             scintilla.Margins[0].Width = 0;
 
@@ -83,6 +86,9 @@ namespace diese
             scintilla.Styles[Style.Default].Font = fontFamily;
             scintilla.Styles[Style.Default].Size = fontSize;
             scintilla.StyleClearAll();
+
+            scintilla.SetKeywords(0, "abstract as base break case catch checked continue default delegate do else event explicit extern false finally fixed for foreach goto if implicit in interface internal is lock namespace new null object operator out override params private protected public readonly ref return sealed sizeof stackalloc switch this throw true try typeof unchecked unsafe using var virtual while");
+            scintilla.SetKeywords(1, "bool byte char class const decimal double enum float int long sbyte short static string struct uint ulong ushort void");
 
             var Green = Color.FromArgb(0, 128, 0);
             var Gray = Color.FromArgb(128, 128, 128);
@@ -117,7 +123,7 @@ namespace diese
                 "    if (asteroid.X < 0) {\n" +
                 "        deg += 180;\n" +
                 "    }\n\n" +
-                "    Tir((int) deg);\n" +
+                "    Tir(deg);\n" +
                 "}\n";
 
             fond.Cursor = Cursors.Default;
@@ -141,19 +147,24 @@ namespace diese
         {
             éditeur.KeyUp += onKeyUp;
             fond.KeyUp += onKeyUp;
+            FormClosing += onFormClosing;
 
-            tick = new Timer();
-            tick.Interval = 1000 / 60; // 60 fps.
-            tick.Tick += onTick;
-
+            tick = new System.Threading.Timer(_ => onTick(), null, 0, 1000 / 60);
             frame = 0;
-            tick.Start();
+        }
+
+        private void onFormClosing(object sender, FormClosingEventArgs e)
+        {
+            tick.Change(Timeout.Infinite, Timeout.Infinite);
+            tick.Dispose();
+            tick = null;
         }
 
         private void onKeyUp(object sender, KeyEventArgs e)
         {
             var pas = 100;
-   
+            var rnd = new Random();
+
             if (sender == fond)
                 switch (e.KeyCode)
                 {
@@ -170,7 +181,7 @@ namespace diese
                         joueur.Move(0, -pas);
                         break;
                     case Keys.Space:
-                        joueur.Shot(90);
+                        joueur.Shot(rnd.NextDouble() * 360);
                         break;
                     case Keys.F5:
                         evaluate(éditeur.Text);
@@ -193,34 +204,34 @@ namespace diese
             registry.RegisterType("Asteroid", typeof(Asteroid));
             registry.RegisterType("Asteroid[]", typeof(Asteroid[]));
             dynamic scope = new ExpandoObject();
-            scope.Gauche = (Func<int,ExpandoObject>)(x =>
+            scope.Gauche = (Func<int, ExpandoObject>)(x =>
             {
                 joueur.Move(-x, 0);
                 return scope;
             });
-            scope.Droite = (Func<int,ExpandoObject>)(x =>
+            scope.Droite = (Func<int, ExpandoObject>)(x =>
             {
                 joueur.Move(x, 0);
                 return scope;
             });
-            scope.Haut = (Func<int,ExpandoObject>)(x =>
+            scope.Haut = (Func<int, ExpandoObject>)(x =>
             {
                 joueur.Move(0, -x);
                 return scope;
             });
-            scope.Bas = (Func<int,ExpandoObject>)(x =>
+            scope.Bas = (Func<int, ExpandoObject>)(x =>
             {
                 joueur.Move(0, x);
                 return scope;
             });
-            scope.Tir = (Func<int,ExpandoObject>)(x =>
+            scope.Tir = (Func<double, ExpandoObject>)(x =>
             {
                 joueur.Shot(x);
                 return scope;
             });
             Func<Asteroid[]> radar = () =>
             {
-                    return asteroids.ToArray();
+                return asteroids.ToArray();
             };
             scope.Radar = radar;
 
@@ -232,23 +243,25 @@ namespace diese
 
             // Préparation du niveau en cours.
             var rnd = new Random();
+            started = true;
             asteroids.ForEach(asteroid =>
                 {
                     asteroid.Dead = true;
                 });
             asteroids.RemoveAll(a => { return a.Dead; });
 
-            for(var i = 0; i < rnd.Next(10, 30); i++) {
+            for (var i = 0; i < rnd.Next(10, 30); i++)
+            {
                 var angle = rnd.NextDouble() * Math.PI * 2f;
-                var distance = rnd.Next(300, 400);
+                var distance = 300 + (10 * i);
                 var asteroid = new Asteroid()
                 {
-                        X = -distance * Math.Cos(angle),
-                        Y = -distance * Math.Sin(angle),
-                        Angle = angle,
-                        Width = images["météorite"].Width,
-                        Height = images["météorite"].Height,
-                        Image = images["météorite"]
+                    X = -distance * Math.Cos(angle),
+                    Y = -distance * Math.Sin(angle),
+                    Angle = angle,
+                    Width = images["météorite"].Width,
+                    Height = images["météorite"].Height,
+                    Image = images["météorite"]
                 };
                 canvas.AddActor(asteroid);
                 asteroids.Add(asteroid);
@@ -264,7 +277,8 @@ namespace diese
                 // Do nothing, no code where entered.
                 //MessageBox.Show("Vous n'avez pas saisi de code à exécuter.");
             }
-            catch (ArgumentException e) {
+            catch (ArgumentException e)
+            {
                 MessageBox.Show(e.Message);
             }
             catch (InvalidOperationException e)
@@ -281,22 +295,23 @@ namespace diese
             }
         }
 
-        private void onTick(object sender, EventArgs e)
+        private void onUpdate()
         {
             canvas.Tick();
             canvas.Invalidate();
+            canvas.Update();
             frame += 1;
 
-            if (asteroids.Count > 0)
+            if (started && asteroids.Count > 0)
             {
                 foreach (var asteroid in asteroids)
                 {
                     if (asteroid.CollisionWith(joueur))
                     {
+                        asteroids.ForEach(a => { a.Dead = true; });
+                        started = false;
                         MessageBox.Show("Vous venez d'exploser dans l'hyper-espace...");
-                        //tick.Stop();
-                        asteroids.ForEach(a => a.Dead = true);
-                        return;
+                        break;
                     }
                 }
 
@@ -312,30 +327,41 @@ namespace diese
                     }
                 }
 
-                asteroids.RemoveAll(asteroid =>
-                    {
-                        return asteroid.Dead;
-                    });
+                asteroids.RemoveAll(asteroid => { return asteroid.Dead; });
 
-                if (asteroids.Count == 0)
+                if (started && asteroids.Count == 0)
                 {
+                    started = false;
                     MessageBox.Show("Vous avez gagné! Bravo.");
                 }
             }
         }
 
+        private void onTick()
+        {
+            try
+            {
+                Invoke(new MethodInvoker(onUpdate), null);
+            }
+            catch (ObjectDisposedException)
+            {
+                // do nothing.
+            }
+
+        }
+
         [STAThread]
         public static void Main(string[] args)
         {
-            var images = new Dictionary<string,string[]>();
+            var images = new Dictionary<string, string[]>();
             // Poulpe verdâtre.
-            images.Add("dièse", new string[]{ "space-shooter", "ships", "9.png" });
+            images.Add("dièse", new string[] { "space-shooter", "ships", "9.png" });
             // Fond étoilé simple.
-            images.Add("fond", new string[]{ "space-shooter", "backgrounds", "1.png" });
+            images.Add("fond", new string[] { "space-shooter", "backgrounds", "1.png" });
             // Tir simple
-            images.Add("tir", new string[]{ "space-shooter", "shots", "7.png" });
+            images.Add("tir", new string[] { "space-shooter", "shots", "7.png" });
             // Grosse météorite
-            images.Add("météorite", new string[]{ "space-shooter", "backgrounds", "meteor-1.png" });
+            images.Add("météorite", new string[] { "space-shooter", "backgrounds", "meteor-1.png" });
 
             Application.Run(new MainForm(images));
         }
