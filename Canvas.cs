@@ -11,33 +11,26 @@ namespace diese
 {
     public class Canvas : Control
     {
-        private readonly List<Actor> actors;
-        private readonly List<Actor> futureActors;
-
-        public readonly List<Bullet> Bullets;
+        protected readonly List<Actor> actors;
+        protected readonly List<Actor> futureActors;
 
         public Canvas()
         {
-            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
-
             SetStyle(
-                System.Windows.Forms.ControlStyles.UserPaint |
-                System.Windows.Forms.ControlStyles.AllPaintingInWmPaint |
-                System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
+                ControlStyles.SupportsTransparentBackColor |
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer,
                 true);
+
+            BackColor = Color.Transparent;
 
             actors = new List<Actor>();
             futureActors = new List<Actor>();
-            Bullets = new List<Bullet>();
         }
 
         public void AddActor(Actor actor)
         {
-            if (actor is Bullet)
-            {
-                Bullets.Add((Bullet)actor);
-            }
             futureActors.Add(actor);
         }
 
@@ -56,15 +49,9 @@ namespace diese
             {
                 actors.Add(actor);
             }
-            Bullets.ForEach(bullet =>
-                {
-                    if (bullet.X > 1000 || bullet.X < -1000 || bullet.Y > 1000 || bullet.Y < -1000)
-                    {
-                        bullet.Dead = true;
-                    }
-                });
-            actors.RemoveAll(a => a.Dead);
             futureActors.Clear();
+
+            actors.RemoveAll(a => a.Dead);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -73,36 +60,32 @@ namespace diese
             var state = e.Graphics.Save();
 
             e.Graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+            // Centre l'affichage.
             e.Graphics.TranslateTransform(rect.Right / 2f, rect.Bottom / 2f);
 
-
-            for (var i = actors.Count - 1; i >= 0; i--)
+            foreach (var actor in actors)
             {
-                actors[i].Draw(e.Graphics);
+                actor.Draw(e.Graphics);
             }
 
             e.Graphics.Restore(state);
         }
     }
 
-    public class Background : Control
+    public class Background : Canvas
     {
         public Image Image;
         private TextureBrush brush;
 
         public Background()
+            : base()
         {
-            SetStyle(
-                System.Windows.Forms.ControlStyles.UserPaint |
-                System.Windows.Forms.ControlStyles.AllPaintingInWmPaint |
-                System.Windows.Forms.ControlStyles.OptimizedDoubleBuffer,
-                true);
-
             Disposed += onDispose;
         }
 
         private void onDispose(object sender, EventArgs e)
         {
+            // Free the memory of the brush before leaving.
             brush.Dispose();
         }
 

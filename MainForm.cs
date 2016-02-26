@@ -20,22 +20,30 @@ namespace diese
 
         private Diese joueur;
         private Background fond;
+        private Canvas devant;
         private Canvas canvas;
+        private Canvas munition;
         private Control éditeur;
         private long frame;
         private IDictionary<string, Image> images;
 
         // System.Windows.Forms.Timer is not great for good fps.
         private System.Threading.Timer tick;
+        private List<Actor> bullets;
         private List<Asteroid> asteroids;
+        private List<Actor> blasts;
         private bool started;
 
         public MainForm(IDictionary<string, string[]> resources)
         {
             images = new Dictionary<string, Image>(resources.Count);
             asteroids = new List<Asteroid>();
+            blasts = new List<Actor>();
+            bullets = new List<Actor>();
             fond = new Background();
             canvas = new Canvas();
+            munition = new Canvas();
+            devant = new Canvas();
 
             foreach (var item in resources)
             {
@@ -43,7 +51,7 @@ namespace diese
             }
             fond.Image = images["fond"];
 
-            joueur = new Diese(canvas, images)
+            joueur = new Diese(this, images)
             {
                 X = 0,
                 Y = 0,
@@ -123,21 +131,30 @@ namespace diese
                 "    if (asteroid.X < 0) {\n" +
                 "        deg += 180;\n" +
                 "    }\n\n" +
-                "    Tir(deg);\n" +
+                "    for (var tir = 0; tir < asteroid.Life; tir++) {\n" +
+                "        Tir(deg);\n" +
+                "    }\n" +
                 "}\n";
 
-            fond.Cursor = Cursors.Default;
             fond.Dock = DockStyle.Fill;
             fond.Parent = splitter.Panel2;
 
-            canvas.Cursor = Cursors.Default;
             canvas.Dock = DockStyle.Fill;
+            canvas.Parent = munition;
+
+            munition.Dock = DockStyle.Fill;
+            munition.Parent = fond;
+
+            devant.Dock = DockStyle.Fill;
+            devant.Parent = canvas;
 
             // lien.
             éditeur = scintilla;
 
             // Les poupées russes.
-            fond.Controls.Add(canvas);
+            canvas.Controls.Add(devant);
+            munition.Controls.Add(canvas);
+            fond.Controls.Add(munition);
             splitter.Panel1.Controls.Add(éditeur);
             splitter.Panel2.Controls.Add(fond);
             Controls.Add(splitter);
@@ -194,6 +211,13 @@ namespace diese
                         evaluate(éditeur.Text);
                         break;
                 }
+        }
+
+        public void AddBullet(Bullet bullet)
+        {
+            Console.WriteLine(bullet);
+            bullets.Add(bullet);
+            munition.AddActor(bullet);
         }
 
         private void evaluate(string code)
@@ -259,9 +283,12 @@ namespace diese
                     X = -distance * Math.Cos(angle),
                     Y = -distance * Math.Sin(angle),
                     Angle = angle,
-                    Width = images["météorite"].Width,
-                    Height = images["météorite"].Height,
-                    Image = images["météorite"]
+                    Life = rnd.Next(1,4),
+                    Images = new Image[]{
+                            images["météorite 1"],
+                            images["météorite 2"],
+                            images["météorite 3"]
+                        }
                 };
                 canvas.AddActor(asteroid);
                 asteroids.Add(asteroid);
@@ -297,9 +324,15 @@ namespace diese
 
         private void onUpdate()
         {
+            munition.Tick();
             canvas.Tick();
+            devant.Tick();
             canvas.Invalidate();
+            munition.Invalidate();
+            devant.Invalidate();
             canvas.Update();
+            munition.Update();
+            devant.Update();
             frame += 1;
 
             if (started && asteroids.Count > 0)
@@ -315,19 +348,43 @@ namespace diese
                     }
                 }
 
-                foreach (var bullet in canvas.Bullets)
+                foreach (var bullet in bullets)
                 {
                     foreach (var asteroid in asteroids)
                     {
                         if (!bullet.Dead && asteroid.CollisionWith(bullet))
                         {
                             bullet.Dead = true;
-                            asteroid.Dead = true;
+                            asteroid.Life--;
+                            var blast = new Blast()
+                                {
+                                    X = asteroid.X,
+                                    Y = asteroid.Y,
+                                    Image = images["explosion"],
+                                    Width = images["explosion"].Width,
+                                    Height = images["explosion"].Height
+                                };
+
+                            devant.AddActor(blast);
+                            blasts.Add(blast);
                         }
                     }
                 }
 
-                asteroids.RemoveAll(asteroid => { return asteroid.Dead; });
+                bullets.ForEach(bullet =>
+                    {
+                        if (bullet.X > 1000 || bullet.X < -1000 || bullet.Y > 1000 || bullet.Y < -1000)
+                        {
+                            bullet.Dead = true;
+                        }
+                    });
+
+
+                foreach (var list in new List<Actor>[] { blasts, bullets })
+                {
+                    list.RemoveAll(b => b.Dead);
+                }
+                asteroids.RemoveAll(b => b.Dead);
 
                 if (started && asteroids.Count == 0)
                 {
@@ -355,13 +412,17 @@ namespace diese
         {
             var images = new Dictionary<string, string[]>();
             // Poulpe verdâtre.
-            images.Add("dièse", new string[] { "space-shooter", "ships", "9.png" });
+            images.Add("dièse", new string[] { "space-shooter", "ships", "10.png" });
             // Fond étoilé simple.
             images.Add("fond", new string[] { "space-shooter", "backgrounds", "1.png" });
             // Tir simple
             images.Add("tir", new string[] { "space-shooter", "shots", "7.png" });
             // Grosse météorite
-            images.Add("météorite", new string[] { "space-shooter", "backgrounds", "meteor-1.png" });
+            images.Add("météorite 3", new string[] { "space-shooter", "backgrounds", "meteor-3.png" });
+            images.Add("météorite 2", new string[] { "space-shooter", "backgrounds", "meteor-4.png" });
+            images.Add("météorite 1", new string[] { "space-shooter", "backgrounds", "meteor-5.png" });
+            // Explosion
+            images.Add("explosion", new string[] { "space-shooter", "effects", "fx-3.png" });
 
             Application.Run(new MainForm(images));
         }

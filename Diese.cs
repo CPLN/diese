@@ -22,6 +22,18 @@ namespace diese
 
         public bool Dead = false;
 
+        public int Life {
+            get { return life; }
+            set  {
+                life = value;
+                if (life < 1)
+                {
+                    Dead = true;
+                }
+            }
+        }
+        private int life;
+
         public double Degree
         {
             get { return Angle * 180 / Math.PI; }
@@ -53,16 +65,16 @@ namespace diese
     public class Diese : Actor
     {
         private readonly List<Operation> moves;
-        private readonly Canvas parent;
         private readonly IDictionary<string, Image> images;
+        private readonly MainForm mainForm;
 
-        public Diese(Canvas canvas, IDictionary<string, Image> assets)
+        public Diese(MainForm main, IDictionary<string, Image> assets)
             : base()
         {
             Speed = 5;
             Angle = 0;
             moves = new List<Operation>();
-            parent = canvas;
+            mainForm = main;
             images = assets;
         }
 
@@ -111,7 +123,7 @@ namespace diese
                 if (!b.HasShot)
                 {
                     var image = images["tir"];
-                    parent.AddActor(new Bullet
+                    mainForm.AddBullet(new Bullet
                         {
                             X = X,
                             Y = Y,
@@ -157,13 +169,16 @@ namespace diese
     {
         public double Rotation;
         public double AngularRotation;
+
         private static Random seed = new Random();
+        public Image[] Images;
 
         public Asteroid()
             : base()
         {
             Speed = 2;
             Rotation = 0;
+            Life = 1;
             // Il faut seeder sinon toutes les valeurs sont identiques (car basé sur le temps).
             var rnd = new Random(seed.Next());
             AngularRotation = (rnd.NextDouble() - .5) * Math.Pow(rnd.NextDouble() + 1, 3);
@@ -180,8 +195,58 @@ namespace diese
         public override void Draw(Graphics g)
         {
             Degree += Rotation;
+            Image = Images[Life - 1];
+            Width = Image.Width;
+            Height = Image.Height;
             base.Draw(g);
             Degree -= Rotation;
+        }
+    }
+
+    public class Blast : Actor
+    {
+        public int Frame;
+        public int FrameRate;
+
+        public Blast()
+            : base()
+        {
+            Frame = 0;
+            FrameRate = 2;
+        }
+
+        public override void Tick()
+        {
+            Frame++;
+
+            var maxFrame = FrameRate * (int)(Width / Height);
+
+            if (Frame > maxFrame)
+            {
+                Dead = true;
+                Frame = maxFrame;
+            }
+                
+        }
+
+        public override void Draw(Graphics gr)
+        {
+            var state = gr.Save();
+            gr.TranslateTransform((float)X, (float)Y);
+            gr.RotateTransform((float)(Degree));
+            gr.DrawImage(
+                Image,
+                (int)(-Height / 2.0), (int)(-Height / 2.0),
+                new Rectangle(){
+                    X = (int)(Height * (int)(Frame / FrameRate)),
+                    Y = 0,
+                    Width = (int)Height,
+                    Height = (int)Height
+                },
+                GraphicsUnit.Pixel
+            );
+            
+            gr.Restore(state);
         }
     }
 }
